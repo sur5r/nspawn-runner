@@ -98,7 +98,7 @@ class NspawnRunner:
         self.root_dir = root_dir
         self.gitlab_build_dir = os.path.join(self.root_dir, ".build")
         self.gitlab_cache_dir = os.path.join(self.root_dir, ".cache")
-        res = subprocess.run(["systemd", "--version"], check=True, capture_output=True, text=True)
+        res = subprocess.run(["systemd-nspawn", "--version"], check=True, capture_output=True, text=True)
         self.systemd_version = int(res.stdout.splitlines()[0].split()[1])
 
     @classmethod
