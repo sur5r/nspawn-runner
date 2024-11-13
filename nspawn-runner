@@ -441,7 +441,7 @@ class Chroot:
 
         # Extract what we need from the variables
         res: Dict[str, Any] = {}
-        for var in ("chroot_suite", "maint_recreate"):
+        for var in ("chroot_suite", "maint_recreate", "mirror"):
             key = f"nspawn_runner_{var}"
             if key not in pb_vars:
                 continue
@@ -514,7 +514,8 @@ class Chroot:
             if suite is None:
                 log.error("%s: chroot_suite not found in playbook, and chroot does not exist", self.image_name)
                 return
-            self.create(suite)
+            mirror = config.get("mirror") or ""
+            self.create(suite, mirror)
         self.run_playbook()
 
 
@@ -522,12 +523,12 @@ class OverlayChroot(Chroot):
     """
     Chroot implemenation for traditional filesystems
     """
-    def create(self, suite: str):
+    def create(self, suite: str, mirror: str):
         cmd = []
         if EATMYDATA is not None:
             cmd.append(EATMYDATA)
         cmd += ["debootstrap", "--variant=minbase", "--include=git,dbus,systemd,python3",
-                suite, self.chroot_dir]
+                suite, self.chroot_dir, mirror]
         run_cmd(cmd)
 
 
@@ -535,7 +536,7 @@ class BtrfsChroot(Chroot):
     """
     Chroot implementation for btrfs fileystems
     """
-    def create(self, suite: str):
+    def create(self, suite: str, mirror: str):
         # Create subvolume for chroot
         run_cmd(["btrfs", "subvolume", "create", self.chroot_dir])
 
@@ -543,7 +544,7 @@ class BtrfsChroot(Chroot):
         if EATMYDATA is not None:
             cmd.append(EATMYDATA)
         cmd += ["debootstrap", "--variant=minbase", "--include=git,dbus,systemd,python3",
-                suite, self.chroot_dir]
+                suite, self.chroot_dir, mirror]
         run_cmd(cmd)
 
     def _is_subvolume(self) -> bool:
@@ -746,7 +747,8 @@ class ChrootCreate(ChrootMixin, SetupMixin, Command):
             suite = config.get("chroot_suite")
         if suite is None:
             suite = self.FALLBACK_SUITE
-        self.chroot.create(suite)
+        mirror = config.get("mirror") or ""
+        self.chroot.create(suite, mirror)
         playbook = self.chroot.config_file_path()
         if playbook is not None:
             self.chroot.run_playbook(playbook)
